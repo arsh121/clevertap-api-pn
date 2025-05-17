@@ -48,6 +48,8 @@ function App() {
   const [csvProcessed, setCsvProcessed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCsvError(null);
     setCampaigns([]);
@@ -94,7 +96,7 @@ function App() {
     // Set all to Processing
     setCampaigns(prev => prev.map(c => ({ ...c, status: 'Processing', failureReason: undefined })));
     try {
-      const response = await axios.post('http://localhost:4000/api/create-campaigns', {
+      const response = await axios.post(`${backendUrl}/api/create-campaigns`, {
         campaigns: campaigns.map(({ status, failureReason, ...rest }) => rest),
       });
       const results = response.data.results;

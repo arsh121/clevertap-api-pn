@@ -9,8 +9,8 @@ app.use(cors());
 app.use(express.json());
 
 const CLEVERTAP_API_URL = 'https://api.clevertap.com/1/targets/create.json';
-const CLEVERTAP_ACCOUNT_ID = 'R9Z-4RW-855Z';
-const CLEVERTAP_PASSCODE = 'ERK-ASE-CPKL';
+const CLEVERTAP_ACCOUNT_ID = process.env.CLEVERTAP_ACCOUNT_ID;
+const CLEVERTAP_PASSCODE = process.env.CLEVERTAP_PASSCODE;
 
 app.post('/api/create-campaigns', async (req, res) => {
   const { campaigns } = req.body;
