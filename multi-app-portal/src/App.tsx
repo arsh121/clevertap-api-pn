@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import './App.css';
 import logo from './khatabook-logo.png';
 import axios from 'axios';
@@ -47,13 +47,47 @@ function App() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [csvProcessed, setCsvProcessed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [timer, setTimer] = useState(0);
+  const [timerActive, setTimerActive] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+
+  // Timer effect
+  useEffect(() => {
+    if (timerActive) {
+      timerRef.current = setInterval(() => {
+        setTimer((t) => t + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [timerActive]);
+
+  // Progress effect
+  useEffect(() => {
+    if (campaigns.length > 0) {
+      const done = campaigns.filter(c => c.status === 'Completed' || c.status === 'Failure').length;
+      setProgress(Math.round((done / campaigns.length) * 100));
+      if (done === campaigns.length && timerActive) {
+        setTimerActive(false);
+      }
+    } else {
+      setProgress(0);
+    }
+  }, [campaigns, timerActive]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCsvError(null);
     setCampaigns([]);
     setCsvProcessed(false);
+    setProgress(0);
+    setTimer(0);
+    setTimerActive(false);
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -93,6 +127,8 @@ function App() {
 
   const handleCreateCampaigns = async () => {
     setIsProcessing(true);
+    setTimer(0);
+    setTimerActive(true);
     // Set all to Processing
     setCampaigns(prev => prev.map(c => ({ ...c, status: 'Processing', failureReason: undefined })));
     try {
@@ -114,6 +150,12 @@ function App() {
     }
     setIsProcessing(false);
   };
+
+  function formatTime(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
 
   return (
     <div className="ct-root">
@@ -145,6 +187,24 @@ function App() {
               <div className="ct-success">CSV processed successfully!</div>
               <div className="ct-campaign-count">Number of campaigns displayed: <b>{campaigns.length}</b></div>
             </>
+          )}
+          {/* Progress Bar and Timer */}
+          {campaigns.length > 0 && (
+            <div style={{ width: '100%', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ flex: 1, background: '#eee', borderRadius: 8, height: 14, overflow: 'hidden' }}>
+                  <div style={{ width: `${progress}%`, height: '100%', background: '#b71c1c', transition: 'width 0.3s', borderRadius: 8 }} />
+                </div>
+                <span style={{ minWidth: 48, color: '#b71c1c', fontWeight: 600 }}>{progress}%</span>
+              </div>
+              <div style={{ marginTop: 4, color: '#888', fontSize: 13 }}>
+                {progress === 100 && campaigns.length > 0
+                  ? `All campaigns processed in ${formatTime(timer)}.`
+                  : timerActive || timer > 0
+                  ? `Elapsed time: ${formatTime(timer)}`
+                  : null}
+              </div>
+            </div>
           )}
         </div>
         <button
